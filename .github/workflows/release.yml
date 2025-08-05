@@ -21,39 +21,59 @@ jobs:
 
       - name: Install AutoHotkey v2
         run: |
-          # Download AutoHotkey v2.0 from GitHub releases
-          $downloadUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
+          # Download AutoHotkey v2.0 runtime from GitHub releases
+          $runtimeUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
           
-          Write-Host "Downloading AutoHotkey v2.0.18..."
-          Invoke-WebRequest -Uri $downloadUrl -OutFile "ahk-v2.zip" -UserAgent "Mozilla/5.0"
+          Write-Host "Downloading AutoHotkey v2.0.18 runtime..."
+          Invoke-WebRequest -Uri $runtimeUrl -OutFile "ahk-runtime.zip" -UserAgent "Mozilla/5.0"
           
-          # Extract the zip file
-          Write-Host "Extracting AutoHotkey..."
-          Expand-Archive -Path "ahk-v2.zip" -DestinationPath "AutoHotkey" -Force
+          # Extract the runtime
+          Write-Host "Extracting AutoHotkey runtime..."
+          Expand-Archive -Path "ahk-runtime.zip" -DestinationPath "AutoHotkey" -Force
           
-          # List contents to understand structure
-          Write-Host "AutoHotkey directory contents:"
-          Get-ChildItem "AutoHotkey" -Recurse
+          # Since the compiler isn't available as separate download, 
+          # we need to install the full AutoHotkey package
+          Write-Host "The compiler is not available separately, installing full AutoHotkey..."
           
-          # Find the actual compiler location
-          $compilerPath = Get-ChildItem -Path "AutoHotkey" -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
-          if ($compilerPath) {
-            $fullCompilerPath = Join-Path "AutoHotkey" $compilerPath
-            Write-Host "Found compiler at: $fullCompilerPath"
+          # Download the installer
+          $installerUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18_setup.exe"
+          Invoke-WebRequest -Uri $installerUrl -OutFile "ahk_setup.exe" -UserAgent "Mozilla/5.0"
+          
+          # Install silently
+          Start-Process -FilePath "ahk_setup.exe" -ArgumentList "/S" -Wait
+          Start-Sleep -Seconds 10
+          
+          # Find installation and copy compiler to our AutoHotkey directory
+          $installPaths = @(
+            "C:\Program Files\AutoHotkey",
+            "C:\Program Files (x86)\AutoHotkey"
+          )
+          
+          foreach ($path in $installPaths) {
+            $compilerPath = Join-Path $path "Compiler\Ahk2Exe.exe"
+            if (Test-Path $compilerPath) {
+              Write-Host "Found compiler at: $compilerPath"
+              Copy-Item $compilerPath "AutoHotkey\Ahk2Exe.exe"
+              break
+            }
+          }
+          
+          # Verify we have the necessary files
+          if (Test-Path "AutoHotkey\AutoHotkey64.exe") {
+            Write-Host "✓ AutoHotkey64.exe found"
           } else {
-            Write-Error "Ahk2Exe.exe not found in extracted files"
+            Write-Error "AutoHotkey64.exe not found"
             exit 1
           }
           
-          # Find AutoHotkey64.exe
-          $ahkExePath = Get-ChildItem -Path "AutoHotkey" -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
-          if ($ahkExePath) {
-            $fullAhkExePath = Join-Path "AutoHotkey" $ahkExePath
-            Write-Host "Found AutoHotkey64.exe at: $fullAhkExePath"
+          if (Test-Path "AutoHotkey\Ahk2Exe.exe") {
+            Write-Host "✓ Ahk2Exe.exe found"
           } else {
-            Write-Error "AutoHotkey64.exe not found in extracted files"
+            Write-Error "Ahk2Exe.exe not found"
             exit 1
           }
+          
+          Write-Host "AutoHotkey installation complete!"
         shell: powershell
 
       - name: Compile AutoHotkey Script
@@ -61,23 +81,8 @@ jobs:
           # Set paths
           $scriptPath = "key.ahk"
           $outputPath = "key.exe"
-          
-          # Find the compiler and base exe
-          $compilerPath = Get-ChildItem -Path "AutoHotkey" -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
-          $ahkExePath = Get-ChildItem -Path "AutoHotkey" -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
-          
-          if (-not $compilerPath) {
-            Write-Error "Compiler not found"
-            exit 1
-          }
-          
-          if (-not $ahkExePath) {
-            Write-Error "AutoHotkey64.exe not found"
-            exit 1
-          }
-          
-          $fullCompilerPath = Join-Path "AutoHotkey" $compilerPath
-          $fullBasePath = Join-Path "AutoHotkey" $ahkExePath
+          $compilerPath = "AutoHotkey\Ahk2Exe.exe"
+          $basePath = "AutoHotkey\AutoHotkey64.exe"
           
           # Verify files exist
           if (-not (Test-Path $scriptPath)) {
@@ -85,22 +90,22 @@ jobs:
             exit 1
           }
           
-          if (-not (Test-Path $fullCompilerPath)) {
-            Write-Error "Compiler not found: $fullCompilerPath"
+          if (-not (Test-Path $compilerPath)) {
+            Write-Error "Compiler not found: $compilerPath"
             exit 1
           }
           
-          if (-not (Test-Path $fullBasePath)) {
-            Write-Error "Base file not found: $fullBasePath"
+          if (-not (Test-Path $basePath)) {
+            Write-Error "Base file not found: $basePath"
             exit 1
           }
           
           # Compile the script
           Write-Host "Compiling $scriptPath to $outputPath..."
-          Write-Host "Using compiler: $fullCompilerPath"
-          Write-Host "Using base: $fullBasePath"
+          Write-Host "Using compiler: $compilerPath"
+          Write-Host "Using base: $basePath"
           
-          & $fullCompilerPath /in $scriptPath /out $outputPath /base $fullBasePath /compress 1
+          & $compilerPath /in $scriptPath /out $outputPath /base $basePath /compress 1
           
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Compilation failed with exit code $LASTEXITCODE"

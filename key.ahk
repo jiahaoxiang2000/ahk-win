@@ -155,15 +155,29 @@ FindWindowInDirection(direction) {
     }
 }
 
+; Helper function to focus first available window after desktop switch
+FocusFirstWindow() {
+    ; Small delay to ensure desktop switch completes
+    Sleep(100)
+
+    ; Get all visible windows and focus the first one
+    windows := GetVisibleWindows()
+    if (windows.Length > 0) {
+        WinActivate(windows[1].hwnd)
+    }
+}
+
 ; Virtual desktop switching with Win+Shift+H/L
 #+h::  ; Win+Shift+h - switch to left desktop
 {
     Send("^#{Left}")
+    FocusFirstWindow()
 }
 
 #+l::  ; Win+Shift+l - switch to right desktop
 {
     Send("^#{Right}")
+    FocusFirstWindow()
 }
 
 ; Vim-like text navigation with Esc combinations

@@ -72,7 +72,7 @@ jobs:
           }
           
           # Set environment variable for compilation step
-          echo "AHK_PATH=$ahkPath" >> $env:GITHUB_ENV
+          echo "AHK_PATH=$ahkPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         shell: powershell
 
       - name: Compile AutoHotkey Script

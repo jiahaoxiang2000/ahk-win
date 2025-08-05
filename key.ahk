@@ -154,3 +154,14 @@ FindWindowInDirection(direction) {
         WinActivate(window.hwnd)
     }
 }
+
+; Virtual desktop switching with Win+Shift+H/L
+#+h::  ; Win+Shift+h - switch to left desktop
+{
+    Send("^#{Left}")
+}
+
+#+l::  ; Win+Shift+l - switch to right desktop
+{
+    Send("^#{Right}")
+}

@@ -17,14 +17,18 @@ This is an AutoHotkey v2.0 project for Windows 11 that provides custom keyboard 
 ## AutoHotkey Development
 
 ### Script Structure
+
 - Uses AutoHotkey v2.0 syntax (`#Requires AutoHotkey v2.0`)
-- Functions use modern v2 syntax: `functionName() { }` 
+- Functions use modern v2 syntax: `functionName() { }`
 - Variable assignment: `variable := value`
 - Window operations: `WinGetList()` returns array directly (no reference parameters)
 
-
 ### Windows System Conflicts
+
 - **Win+L**: Conflicts with Windows lock screen - kept disabled by default
 - **Win+H/J/K**: Safe to override, no major Windows conflicts
 - Use `~` prefix to allow Windows default behavior alongside custom actions
 
+## Guidance for Function Additions
+
+- If adding a new function to the project, ensure to update the README.md with a basic introduction and explanation of the function's purpose

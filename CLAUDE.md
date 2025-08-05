@@ -32,3 +32,4 @@ This is an AutoHotkey v2.0 project for Windows 11 that provides custom keyboard 
 ## Guidance for Function Additions
 
 - If adding a new function to the project, ensure to update the README.md with a basic introduction and explanation of the function's purpose
+- When changing something in the project, always update the @CHANGELOG.md to document the changes

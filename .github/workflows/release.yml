@@ -21,22 +21,37 @@ jobs:
 
       - name: Install AutoHotkey v2
         run: |
-          # Download AutoHotkey v2.0 installer
-          Invoke-WebRequest -Uri "https://www.autohotkey.com/download/ahk-v2.zip" -OutFile "ahk-v2.zip"
-
+          # Download AutoHotkey v2.0 from GitHub releases
+          $downloadUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
+          
+          Write-Host "Downloading AutoHotkey v2.0.18..."
+          Invoke-WebRequest -Uri $downloadUrl -OutFile "ahk-v2.zip" -UserAgent "Mozilla/5.0"
+          
           # Extract the zip file
+          Write-Host "Extracting AutoHotkey..."
           Expand-Archive -Path "ahk-v2.zip" -DestinationPath "AutoHotkey" -Force
-
-          # Add AutoHotkey to PATH for this session
-          $ahkPath = Join-Path $PWD "AutoHotkey"
-          echo "$ahkPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-          # Verify installation
-          if (Test-Path "$ahkPath\Compiler\Ahk2Exe.exe") {
-            Write-Host "AutoHotkey v2 installed successfully"
-            Write-Host "Compiler location: $ahkPath\Compiler\Ahk2Exe.exe"
+          
+          # List contents to understand structure
+          Write-Host "AutoHotkey directory contents:"
+          Get-ChildItem "AutoHotkey" -Recurse
+          
+          # Find the actual compiler location
+          $compilerPath = Get-ChildItem -Path "AutoHotkey" -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+          if ($compilerPath) {
+            $fullCompilerPath = Join-Path "AutoHotkey" $compilerPath
+            Write-Host "Found compiler at: $fullCompilerPath"
           } else {
-            Write-Error "AutoHotkey installation failed"
+            Write-Error "Ahk2Exe.exe not found in extracted files"
+            exit 1
+          }
+          
+          # Find AutoHotkey64.exe
+          $ahkExePath = Get-ChildItem -Path "AutoHotkey" -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
+          if ($ahkExePath) {
+            $fullAhkExePath = Join-Path "AutoHotkey" $ahkExePath
+            Write-Host "Found AutoHotkey64.exe at: $fullAhkExePath"
+          } else {
+            Write-Error "AutoHotkey64.exe not found in extracted files"
             exit 1
           }
         shell: powershell
@@ -46,34 +61,52 @@ jobs:
           # Set paths
           $scriptPath = "key.ahk"
           $outputPath = "key.exe"
-          $compilerPath = "AutoHotkey\Compiler\Ahk2Exe.exe"
-          $basePath = "AutoHotkey\AutoHotkey64.exe"
-
+          
+          # Find the compiler and base exe
+          $compilerPath = Get-ChildItem -Path "AutoHotkey" -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+          $ahkExePath = Get-ChildItem -Path "AutoHotkey" -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
+          
+          if (-not $compilerPath) {
+            Write-Error "Compiler not found"
+            exit 1
+          }
+          
+          if (-not $ahkExePath) {
+            Write-Error "AutoHotkey64.exe not found"
+            exit 1
+          }
+          
+          $fullCompilerPath = Join-Path "AutoHotkey" $compilerPath
+          $fullBasePath = Join-Path "AutoHotkey" $ahkExePath
+          
           # Verify files exist
           if (-not (Test-Path $scriptPath)) {
             Write-Error "Script file not found: $scriptPath"
             exit 1
           }
-
-          if (-not (Test-Path $compilerPath)) {
-            Write-Error "Compiler not found: $compilerPath"
+          
+          if (-not (Test-Path $fullCompilerPath)) {
+            Write-Error "Compiler not found: $fullCompilerPath"
             exit 1
           }
-
-          if (-not (Test-Path $basePath)) {
-            Write-Error "Base file not found: $basePath"
+          
+          if (-not (Test-Path $fullBasePath)) {
+            Write-Error "Base file not found: $fullBasePath"
             exit 1
           }
-
+          
           # Compile the script
           Write-Host "Compiling $scriptPath to $outputPath..."
-          & $compilerPath /in $scriptPath /out $outputPath /base $basePath /compress 1
-
+          Write-Host "Using compiler: $fullCompilerPath"
+          Write-Host "Using base: $fullBasePath"
+          
+          & $fullCompilerPath /in $scriptPath /out $outputPath /base $fullBasePath /compress 1
+          
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Compilation failed with exit code $LASTEXITCODE"
             exit 1
           }
-
+          
           if (Test-Path $outputPath) {
             Write-Host "Compilation successful! Output: $outputPath"
             $fileInfo = Get-Item $outputPath

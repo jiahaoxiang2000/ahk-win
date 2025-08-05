@@ -26,7 +26,7 @@ These shortcuts provide quick desktop switching without needing to use the Windo
 
 ### Vim-like Text Navigation
 
-Use **Esc** as a modifier key for vim-like text navigation and editing: (inspired by @wzj-zz)
+Use **Esc** as a modifier key for vim-like text navigation and editing: (inspired by [@wzj-zz](https://github.com/wzj-zz))
 
 #### Basic Movement
 

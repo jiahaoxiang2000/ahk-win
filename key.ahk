@@ -24,6 +24,10 @@ GetVisibleWindows() {
         if (title == "")
             continue
 
+        ; Skip keyviz tool windows (key visualization tools)
+        if (InStr(title, "keyviz") || InStr(title, "KeyViz") || InStr(title, "KEYVIZ"))
+            continue
+
         windows.Push({
             hwnd: hwnd,
             x: x,

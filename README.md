@@ -24,6 +24,40 @@ Navigate between Windows virtual desktops using **Win+Shift+H/L**:
 
 These shortcuts provide quick desktop switching without needing to use the Windows Task View interface.
 
+### Vim-like Text Navigation
+
+Use **Esc** as a modifier key for vim-like text navigation and editing: (inspired by @wzj-zz)
+
+#### Basic Movement
+- **Esc+H/J/K/L** - Left/Down/Up/Right arrow keys
+- **Esc+A** - Home (beginning of line)
+- **Esc+;** - End (end of line)
+
+#### Word Movement
+- **Esc+U** - Ctrl+Left (previous word)
+- **Esc+I** - Ctrl+Right (next word)
+
+#### Text Selection
+- **Esc+N** - Ctrl+Shift+Left (select previous word)
+- **Esc+M** - Ctrl+Shift+Right (select next word)
+- **Esc+,** - Shift+Home (select to beginning of line)
+- **Esc+.** - Shift+End (select to end of line)
+- **Esc+B** - Shift+Left (select left)
+- **Esc+E** - Shift+Right (select right)
+- **Esc+/** - Shift+Down (select down)
+- **Esc+P** - Shift+Up (select up)
+
+#### Page Navigation
+- **Esc+D** - Page Down
+- **Esc+F** - Page Up
+- **Esc+S** - Shift+Page Down (select page down)
+- **Esc+R** - Shift+Page Up (select page up)
+
+#### Editing
+- **Esc+Y** - Backspace
+- **Esc+O** - Ctrl+Backspace (delete previous word)
+- **Esc+Shift** - Delete
+
 ## Installation
 
 1. Install [AutoHotkey v2.0](https://www.autohotkey.com/v2/)
@@ -36,6 +70,7 @@ The hotkeys work immediately after running the script:
 
 - **Window Navigation**: Use Win+H/J/K/L to navigate between visible windows in the corresponding directions
 - **Desktop Switching**: Use Win+Shift+H/L to switch between virtual desktops (left/right)
+- **Text Navigation**: Use Esc as a modifier key for vim-like text editing and navigation in any application
 
 ## Technical Details
 

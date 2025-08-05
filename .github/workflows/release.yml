@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0 # We need full history to get commit messages
 
-      - name: Install AutoHotkey v2 and setup compiler
+      - name: Install AutoHotkey v2 for runtime bundle
         run: |
           Write-Host "Installing AutoHotkey v2 via Chocolatey..."
           choco install autohotkey -y
@@ -29,52 +29,12 @@ jobs:
           $ahkPath = "C:\Program Files\AutoHotkey"
           Write-Host "Found AutoHotkey at: $ahkPath"
           
-          Write-Host "AutoHotkey installation contents:"
-          Get-ChildItem $ahkPath -Recurse
-          
-          # Check if compiler exists
-          $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
-          if (-not $compiler) {
-            Write-Host "Compiler not found, installing it manually..."
-            
-            # Run the install-ahk2exe.ahk script that comes with AutoHotkey
-            $installScript = Join-Path $ahkPath "UX\install-ahk2exe.ahk"
-            if (Test-Path $installScript) {
-              Write-Host "Running install-ahk2exe.ahk script..."
-              & "$ahkPath\v2\AutoHotkey64.exe" $installScript
-              Start-Sleep -Seconds 10
-            } else {
-              Write-Host "install-ahk2exe.ahk not found, creating compiler directory manually..."
-              $compilerDir = Join-Path $ahkPath "Compiler"
-              New-Item -ItemType Directory -Path $compilerDir -Force
-              
-              # Download compiler from GitHub releases
-              $compilerUrl = "https://raw.githubusercontent.com/AutoHotkey/Ahk2Exe/master/Ahk2Exe.exe"
-              $compilerPath = Join-Path $compilerDir "Ahk2Exe.exe"
-              
-              try {
-                Write-Host "Downloading Ahk2Exe from GitHub..."
-                Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerPath -UserAgent "Mozilla/5.0"
-              } catch {
-                Write-Host "Direct download failed, copying from resources..."
-                # Fallback: use built-in compilation method if available
-                Write-Host "Will use runtime compilation instead of pre-compiled exe"
-              }
-            }
-          }
-          
-          # Re-check for compiler
-          $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+          # Find runtime executable
           $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
-          
-          if ($compiler) {
-            Write-Host "Compiler found: $compiler"
-          } else {
-            Write-Host "WARNING: Ahk2Exe.exe still not found, will try alternative compilation"
-          }
           
           if ($runtime) {
             Write-Host "Runtime found: $runtime"
+            Write-Host "Will create runtime bundle instead of compiled exe"
           } else {
             Write-Error "AutoHotkey64.exe not found"
             exit 1
@@ -83,88 +43,53 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "AHK_PATH=$ahkPath"
         shell: powershell
 
-      - name: Compile AutoHotkey Script
+      - name: Create Runtime Bundle
         run: |
           $scriptPath = "key.ahk"
           $outputPath = "key.exe"
           $ahkPath = $env:AHK_PATH
           
-          # Find compiler and runtime in installation
-          $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
-          $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
+          Write-Host "Creating runtime bundle (no compilation)..."
+          $runtimePath = Join-Path $ahkPath "v2\AutoHotkey64.exe"
           
-          if ($compiler -and $runtime) {
-            $compilerPath = Join-Path $ahkPath $compiler
-            $basePath = Join-Path $ahkPath $runtime
-            
-            Write-Host "Using Ahk2Exe compiler method..."
-            Write-Host "Compiler: $compilerPath"
-            Write-Host "Base: $basePath"
-          } else {
-            # Alternative: create a bundle instead of compilation
-            Write-Host "Ahk2Exe not available, creating runtime bundle..."
-            $runtimePath = Join-Path $ahkPath "v2\AutoHotkey64.exe"
-            
-            if (Test-Path $runtimePath) {
-              # Copy runtime and script together
-              Copy-Item $runtimePath $outputPath
-              Write-Host "Created runtime bundle: $outputPath"
-              
-              # Create a batch file that runs the script
-              $batchContent = "@echo off`nstart `"`" `"$outputPath`" `"key.ahk`""
-              Set-Content -Path "run-key.bat" -Value $batchContent
-              
-              Write-Host "Runtime bundle created successfully"
-              exit 0
-            } else {
-              Write-Error "No compilation method available"
-              exit 1
-            }
-          }
-          
-          # Verify files exist
           if (-not (Test-Path $scriptPath)) {
             Write-Error "Script file not found: $scriptPath"
             exit 1
           }
           
-          if (-not (Test-Path $compilerPath)) {
-            Write-Error "Compiler not found: $compilerPath"
+          if (-not (Test-Path $runtimePath)) {
+            Write-Error "Runtime not found: $runtimePath"
             exit 1
           }
           
-          if (-not (Test-Path $basePath)) {
-            Write-Error "Base file not found: $basePath"
-            exit 1
-          }
+          # Copy runtime as the "executable"
+          Copy-Item $runtimePath $outputPath
+          Write-Host "Created runtime bundle: $outputPath"
           
-          # Compile the script
-          Write-Host "Compiling $scriptPath to $outputPath..."
-          Write-Host "Using compiler: $compilerPath"
-          Write-Host "Using base: $basePath"
+          # Create a batch file for easy execution
+          $batchContent = "@echo off`necho Starting AutoHotkey script...`nstart `"`" `"%~dp0key.exe`" `"%~dp0key.ahk`""
+          Set-Content -Path "run-key.bat" -Value $batchContent
           
-          & $compilerPath /in $scriptPath /out $outputPath /base $basePath /compress 1
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Compilation failed with exit code $LASTEXITCODE"
-            exit 1
-          }
-          
-          if (Test-Path $outputPath) {
-            Write-Host "Compilation successful! Output: $outputPath"
-            $fileInfo = Get-Item $outputPath
-            Write-Host "File size: $($fileInfo.Length) bytes"
-          } else {
-            Write-Error "Compiled executable not found"
-            exit 1
-          }
+          Write-Host "Runtime bundle created successfully!"
+          Write-Host "Users should run: key.exe key.ahk"
+          Write-Host "Or use the provided run-key.bat file"
         shell: powershell
 
       - name: Get previous tag
         id: previoustag
         run: |
-          echo "PREVIOUS_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo '')" >> $GITHUB_ENV
-          echo "CURRENT_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          try {
+            $previousTag = git describe --tags --abbrev=0 (git rev-list --tags --skip=1 --max-count=1) 2>$null
+            if (-not $previousTag) { $previousTag = "" }
+          } catch {
+            $previousTag = ""
+          }
+          
+          $currentTag = $env:GITHUB_REF -replace '^refs/tags/', ''
+          
+          Add-Content -Path $env:GITHUB_ENV -Value "PREVIOUS_TAG=$previousTag"
+          Add-Content -Path $env:GITHUB_ENV -Value "CURRENT_TAG=$currentTag"
+        shell: powershell
 
       - name: Generate release notes
         id: generate_notes
@@ -194,13 +119,17 @@ jobs:
 
             ## Download
 
-            - **key.exe** - Compiled AutoHotkey executable (Windows)
-            - **Source code** - Download the source files to compile yourself
+            - **key.exe** - AutoHotkey runtime (Windows)
+            - **key.ahk** - AutoHotkey script file
+            - **run-key.bat** - Convenient batch file to run the script
 
             ## Installation
 
-            1. Download `key.exe` from the assets below
-            2. Run the executable to start the AutoHotkey script
+            1. Download all three files: `key.exe`, `key.ahk`, and `run-key.bat`
+            2. Place all files in the same directory
+            3. Double-click `run-key.bat` to start, or run: `key.exe key.ahk`
+
+            Note: This is a runtime bundle. Both key.exe and key.ahk are required.
 
             ## Features
 
@@ -209,6 +138,8 @@ jobs:
             - **Esc + combinations**: Comprehensive vim-like text navigation
           files: |
             key.exe
+            key.ahk
+            run-key.bat
           draft: false
           prerelease: false
         env:

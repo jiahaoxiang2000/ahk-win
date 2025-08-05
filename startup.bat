@@ -6,6 +6,19 @@ REM Get the directory where this batch file is located
 set "SCRIPT_DIR=%~dp0"
 set "AHK_FILE=%SCRIPT_DIR%key.ahk"
 set "EXE_FILE=%SCRIPT_DIR%key.exe"
+set "EXE_NAME=key.exe"
+
+REM Check if exe is currently running and kill it
+echo Checking if %EXE_NAME% is running...
+tasklist /FI "IMAGENAME eq %EXE_NAME%" 2>NUL | find /I /N "%EXE_NAME%">NUL
+if "%ERRORLEVEL%"=="0" (
+    echo %EXE_NAME% is running, terminating it...
+    taskkill /F /IM "%EXE_NAME%" >NUL 2>NUL
+    timeout /t 1 >NUL
+    echo Process terminated.
+) else (
+    echo %EXE_NAME% is not running.
+)
 
 REM Check if key.ahk exists
 if not exist "%AHK_FILE%" (
@@ -15,17 +28,8 @@ if not exist "%AHK_FILE%" (
     exit /b 1
 )
 
-REM Check if compiled exe already exists and is newer than source
-if exist "%EXE_FILE%" (
-    for %%i in ("%AHK_FILE%") do set AHK_DATE=%%~ti
-    for %%i in ("%EXE_FILE%") do set EXE_DATE=%%~ti
-    
-    REM If exe is newer than ahk, skip compilation
-    if "%EXE_DATE%" GEQ "%AHK_DATE%" (
-        echo Using existing compiled executable...
-        goto :run_exe
-    )
-)
+REM Always recompile to ensure latest changes are included
+echo Preparing to compile %AHK_FILE%...
 
 REM Find Ahk2Exe compiler
 set "AHK2EXE="

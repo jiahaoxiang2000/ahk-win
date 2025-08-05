@@ -29,15 +29,18 @@ These shortcuts provide quick desktop switching without needing to use the Windo
 Use **Esc** as a modifier key for vim-like text navigation and editing: (inspired by @wzj-zz)
 
 #### Basic Movement
+
 - **Esc+H/J/K/L** - Left/Down/Up/Right arrow keys
 - **Esc+A** - Home (beginning of line)
 - **Esc+;** - End (end of line)
 
 #### Word Movement
+
 - **Esc+U** - Ctrl+Left (previous word)
 - **Esc+I** - Ctrl+Right (next word)
 
 #### Text Selection
+
 - **Esc+N** - Ctrl+Shift+Left (select previous word)
 - **Esc+M** - Ctrl+Shift+Right (select next word)
 - **Esc+,** - Shift+Home (select to beginning of line)
@@ -48,12 +51,14 @@ Use **Esc** as a modifier key for vim-like text navigation and editing: (inspire
 - **Esc+P** - Shift+Up (select up)
 
 #### Page Navigation
+
 - **Esc+D** - Page Down
 - **Esc+F** - Page Up
 - **Esc+S** - Shift+Page Down (select page down)
 - **Esc+R** - Shift+Page Up (select page up)
 
 #### Editing
+
 - **Esc+Y** - Backspace
 - **Esc+O** - Ctrl+Backspace (delete previous word)
 - **Esc+Shift** - Delete
@@ -63,6 +68,22 @@ Use **Esc** as a modifier key for vim-like text navigation and editing: (inspire
 1. Install [AutoHotkey v2.0](https://www.autohotkey.com/v2/)
 2. Clone this repository
 3. Run `key.ahk` by double-clicking or right-click → "Compile Script"
+
+### Auto-Startup on Windows Boot
+
+To automatically start the script when Windows boots:
+
+#### Method 1: Using the Startup Script (Recommended)
+
+1. Run `startup.bat` once to test compilation and execution
+   - The script will compile `key.ahk` to `key.exe` using Ahk2Exe
+   - Then automatically run the compiled executable
+2. Copy `startup.bat` to your Windows Startup folder:
+   - Press `Win+R`, type `shell:startup`, and press Enter
+   - Copy `startup.bat` to the opened folder
+3. The script will now compile and start automatically when Windows boots
+
+**Note**: The startup script automatically compiles `key.ahk` to an executable, so the compiled program can run even on systems without AutoHotkey installed.
 
 ## Usage
 
@@ -75,10 +96,12 @@ The hotkeys work immediately after running the script:
 ## Technical Details
 
 ### Window Selection Algorithm
+
 - Compares same edges (left-to-left, top-to-top) for more intuitive navigation
 - Calculates primary distance in the movement direction
 - Applies overlap penalties for windows without perpendicular axis overlap
 - Prioritizes windows with visual alignment over pure distance
 
 ### Multi-Monitor Support
+
 The algorithm considers window overlap on the perpendicular axis, ensuring natural navigation across multiple monitors without jumping to distant windows.

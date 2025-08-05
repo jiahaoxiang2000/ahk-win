@@ -19,70 +19,75 @@ jobs:
         with:
           fetch-depth: 0 # We need full history to get commit messages
 
-      - name: Install AutoHotkey v2
+      - name: Install AutoHotkey v2 via Chocolatey
         run: |
-          # Download AutoHotkey v2.0 runtime from GitHub releases
-          $runtimeUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
+          Write-Host "Installing AutoHotkey v2 via Chocolatey..."
+          choco install autohotkey -y
           
-          Write-Host "Downloading AutoHotkey v2.0.18 runtime..."
-          Invoke-WebRequest -Uri $runtimeUrl -OutFile "ahk-runtime.zip" -UserAgent "Mozilla/5.0"
+          # Wait for installation to complete
+          Start-Sleep -Seconds 5
           
-          # Extract the runtime
-          Write-Host "Extracting AutoHotkey runtime..."
-          Expand-Archive -Path "ahk-runtime.zip" -DestinationPath "AutoHotkey" -Force
-          
-          # Since the compiler isn't available as separate download, 
-          # we need to install the full AutoHotkey package
-          Write-Host "The compiler is not available separately, installing full AutoHotkey..."
-          
-          # Download the installer
-          $installerUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18_setup.exe"
-          Invoke-WebRequest -Uri $installerUrl -OutFile "ahk_setup.exe" -UserAgent "Mozilla/5.0"
-          
-          # Install silently
-          Start-Process -FilePath "ahk_setup.exe" -ArgumentList "/S" -Wait
-          Start-Sleep -Seconds 10
-          
-          # Find installation and copy compiler to our AutoHotkey directory
-          $installPaths = @(
+          # Find AutoHotkey installation
+          $possiblePaths = @(
             "C:\Program Files\AutoHotkey",
-            "C:\Program Files (x86)\AutoHotkey"
+            "C:\Program Files (x86)\AutoHotkey",
+            "C:\ProgramData\chocolatey\lib\autohotkey\tools"
           )
           
-          foreach ($path in $installPaths) {
-            $compilerPath = Join-Path $path "Compiler\Ahk2Exe.exe"
-            if (Test-Path $compilerPath) {
-              Write-Host "Found compiler at: $compilerPath"
-              Copy-Item $compilerPath "AutoHotkey\Ahk2Exe.exe"
+          $ahkPath = $null
+          foreach ($path in $possiblePaths) {
+            Write-Host "Checking: $path"
+            if (Test-Path $path) {
+              $ahkPath = $path
+              Write-Host "✓ Found AutoHotkey at: $path"
               break
             }
           }
           
-          # Verify we have the necessary files
-          if (Test-Path "AutoHotkey\AutoHotkey64.exe") {
-            Write-Host "✓ AutoHotkey64.exe found"
-          } else {
-            Write-Error "AutoHotkey64.exe not found"
+          if (-not $ahkPath) {
+            Write-Error "AutoHotkey installation not found"
             exit 1
           }
           
-          if (Test-Path "AutoHotkey\Ahk2Exe.exe") {
-            Write-Host "✓ Ahk2Exe.exe found"
+          # List installation contents
+          Write-Host "AutoHotkey installation contents:"
+          Get-ChildItem $ahkPath -Recurse
+          
+          # Find and verify compiler
+          $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+          $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
+          
+          if ($compiler) {
+            Write-Host "✓ Compiler found: $compiler"
           } else {
             Write-Error "Ahk2Exe.exe not found"
             exit 1
           }
           
-          Write-Host "AutoHotkey installation complete!"
+          if ($runtime) {
+            Write-Host "✓ Runtime found: $runtime"
+          } else {
+            Write-Error "AutoHotkey64.exe not found"
+            exit 1
+          }
+          
+          # Set environment variable for compilation step
+          echo "AHK_PATH=$ahkPath" >> $env:GITHUB_ENV
         shell: powershell
 
       - name: Compile AutoHotkey Script
         run: |
-          # Set paths
+          # Set paths using environment variable from previous step
           $scriptPath = "key.ahk"
           $outputPath = "key.exe"
-          $compilerPath = "AutoHotkey\Ahk2Exe.exe"
-          $basePath = "AutoHotkey\AutoHotkey64.exe"
+          $ahkPath = $env:AHK_PATH
+          
+          # Find compiler and runtime in installation
+          $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+          $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
+          
+          $compilerPath = Join-Path $ahkPath $compiler
+          $basePath = Join-Path $ahkPath $runtime
           
           # Verify files exist
           if (-not (Test-Path $scriptPath)) {

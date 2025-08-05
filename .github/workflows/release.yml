@@ -11,85 +11,19 @@ permissions:
 
 jobs:
   build:
-    name: Build and Create Release
-    runs-on: windows-latest
+    name: Create Release
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # We need full history to get commit messages
 
-      - name: Install AutoHotkey v2 for runtime bundle
-        run: |
-          Write-Host "Installing AutoHotkey v2 via Chocolatey..."
-          choco install autohotkey -y
-          
-          Start-Sleep -Seconds 5
-          
-          $ahkPath = "C:\Program Files\AutoHotkey"
-          Write-Host "Found AutoHotkey at: $ahkPath"
-          
-          # Find runtime executable
-          $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
-          
-          if ($runtime) {
-            Write-Host "Runtime found: $runtime"
-            Write-Host "Will create runtime bundle instead of compiled exe"
-          } else {
-            Write-Error "AutoHotkey64.exe not found"
-            exit 1
-          }
-          
-          Add-Content -Path $env:GITHUB_ENV -Value "AHK_PATH=$ahkPath"
-        shell: powershell
-
-      - name: Create Runtime Bundle
-        run: |
-          $scriptPath = "key.ahk"
-          $outputPath = "key.exe"
-          $ahkPath = $env:AHK_PATH
-          
-          Write-Host "Creating runtime bundle (no compilation)..."
-          $runtimePath = Join-Path $ahkPath "v2\AutoHotkey64.exe"
-          
-          if (-not (Test-Path $scriptPath)) {
-            Write-Error "Script file not found: $scriptPath"
-            exit 1
-          }
-          
-          if (-not (Test-Path $runtimePath)) {
-            Write-Error "Runtime not found: $runtimePath"
-            exit 1
-          }
-          
-          # Copy runtime as the "executable"
-          Copy-Item $runtimePath $outputPath
-          Write-Host "Created runtime bundle: $outputPath"
-          
-          # Create a batch file for easy execution
-          $batchContent = "@echo off`necho Starting AutoHotkey script...`nstart `"`" `"%~dp0key.exe`" `"%~dp0key.ahk`""
-          Set-Content -Path "run-key.bat" -Value $batchContent
-          
-          Write-Host "Runtime bundle created successfully!"
-          Write-Host "Users should run: key.exe key.ahk"
-          Write-Host "Or use the provided run-key.bat file"
-        shell: powershell
-
       - name: Get previous tag
         id: previoustag
         run: |
-          try {
-            $previousTag = git describe --tags --abbrev=0 (git rev-list --tags --skip=1 --max-count=1) 2>$null
-            if (-not $previousTag) { $previousTag = "" }
-          } catch {
-            $previousTag = ""
-          }
-          
-          $currentTag = $env:GITHUB_REF -replace '^refs/tags/', ''
-          
-          Add-Content -Path $env:GITHUB_ENV -Value "PREVIOUS_TAG=$previousTag"
-          Add-Content -Path $env:GITHUB_ENV -Value "CURRENT_TAG=$currentTag"
-        shell: powershell
+          echo "PREVIOUS_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo '')" >> $GITHUB_ENV
+          echo "CURRENT_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: generate_notes
@@ -114,32 +48,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ env.CURRENT_TAG }}
-          body: |
-            ${{ env.RELEASE_NOTES }}
-
-            ## Download
-
-            - **key.exe** - AutoHotkey runtime (Windows)
-            - **key.ahk** - AutoHotkey script file
-            - **run-key.bat** - Convenient batch file to run the script
-
-            ## Installation
-
-            1. Download all three files: `key.exe`, `key.ahk`, and `run-key.bat`
-            2. Place all files in the same directory
-            3. Double-click `run-key.bat` to start, or run: `key.exe key.ahk`
-
-            Note: This is a runtime bundle. Both key.exe and key.ahk are required.
-
-            ## Features
-
-            - **Win+H/J/K/L**: Navigate between windows (vim-like)
-            - **Win+Shift+H/L**: Switch virtual desktops with auto-focus
-            - **Esc + combinations**: Comprehensive vim-like text navigation
-          files: |
-            key.exe
-            key.ahk
-            run-key.bat
+          body: ${{ env.RELEASE_NOTES }}
           draft: false
           prerelease: false
         env:

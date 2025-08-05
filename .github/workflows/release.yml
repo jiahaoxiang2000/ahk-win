@@ -24,13 +24,11 @@ jobs:
           Write-Host "Installing AutoHotkey v2 via Chocolatey..."
           choco install autohotkey -y
           
-          # Wait for installation to complete
           Start-Sleep -Seconds 5
           
-          # Find AutoHotkey installation
           $possiblePaths = @(
             "C:\Program Files\AutoHotkey",
-            "C:\Program Files (x86)\AutoHotkey",
+            "C:\Program Files (x86)\AutoHotkey", 
             "C:\ProgramData\chocolatey\lib\autohotkey\tools"
           )
           
@@ -39,7 +37,7 @@ jobs:
             Write-Host "Checking: $path"
             if (Test-Path $path) {
               $ahkPath = $path
-              Write-Host "✓ Found AutoHotkey at: $path"
+              Write-Host "Found AutoHotkey at: $path"
               break
             }
           }
@@ -49,30 +47,27 @@ jobs:
             exit 1
           }
           
-          # List installation contents
           Write-Host "AutoHotkey installation contents:"
           Get-ChildItem $ahkPath -Recurse
           
-          # Find and verify compiler
           $compiler = Get-ChildItem -Path $ahkPath -Name "Ahk2Exe.exe" -Recurse | Select-Object -First 1
           $runtime = Get-ChildItem -Path $ahkPath -Name "AutoHotkey64.exe" -Recurse | Select-Object -First 1
           
           if ($compiler) {
-            Write-Host "✓ Compiler found: $compiler"
+            Write-Host "Compiler found: $compiler"
           } else {
             Write-Error "Ahk2Exe.exe not found"
             exit 1
           }
           
           if ($runtime) {
-            Write-Host "✓ Runtime found: $runtime"
+            Write-Host "Runtime found: $runtime"
           } else {
             Write-Error "AutoHotkey64.exe not found"
             exit 1
           }
           
-          # Set environment variable for compilation step
-          echo "AHK_PATH=$ahkPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Add-Content -Path $env:GITHUB_ENV -Value "AHK_PATH=$ahkPath"
         shell: powershell
 
       - name: Compile AutoHotkey Script

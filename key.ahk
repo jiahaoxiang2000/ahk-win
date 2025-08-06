@@ -159,6 +159,16 @@ FindWindowInDirection(direction) {
     }
 }
 
+#w::  ; Win+w - close current window
+{
+    WinClose("A")
+}
+
+#Space::  ; Win+Space - mapped to Ctrl+Space
+{
+    Send("^{Space}")
+}
+
 ; Helper function to focus first available window after desktop switch
 FocusFirstWindow() {
     ; Small delay to ensure desktop switch completes

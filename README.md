@@ -12,6 +12,8 @@ Vim-like window navigation using **Win+HJKL** hotkeys:
 - **Win+J** - Focus window below
 - **Win+K** - Focus window above
 - **Win+L** - Focus window to the right
+- **Win+W** - Close current window
+- **Win+Space** - Sends Ctrl+Space (remapped from keyboard layout switching)
 
 The navigation system uses intelligent distance calculation that considers both directional proximity and window overlap, making it ideal for multi-monitor setups.
 
